@@ -1,0 +1,6 @@
+# sml-app: yalnızca DMZ'den gelen X-Forwarded-For'a güvenilir.
+# proxy-real-ip-cidr (= NET_APP_SUBNET) args.sh tarafından config.env'den verilir.
+controller:
+  config:
+    use-forwarded-headers: "true"
+    compute-full-forwarded-for: "true"

@@ -1,0 +1,11 @@
+# DMZ: istemci IP'si edge LB'den PROXY protocol ile gelir; gelen X-Forwarded-* başlıklarına güvenilmez.
+# proxy-real-ip-cidr (= NET_DMZ_SUBNET, yalnızca edge LB) ve X-Dmz cevap başlığı args.sh / up.sh tarafından verilir.
+controller:
+  config:
+    use-proxy-protocol: "true"
+    use-forwarded-headers: "false"
+    compute-full-forwarded-for: "true"
+    hide-headers: "X-Powered-By,Server"
+    proxy-body-size: "10m"
+    limit-req-status-code: "429"
+    hsts: "false"   # self-signed sertifika

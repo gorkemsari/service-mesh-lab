@@ -1,0 +1,22 @@
+# shop.localtest.me: internet -> edge LB -> DMZ (TLS sonlanır) -> sml-app ingress -> shop/gateway
+# S05 testi aynı host için /admin kuralını geçici olarak ekler.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shop
+  annotations:
+    nginx.ingress.kubernetes.io/upstream-vhost: shop.localtest.me
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "2"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [shop.localtest.me]
+      secretName: edge-tls
+  rules:
+    - host: shop.localtest.me
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: app-ingress, port: { name: http } }

@@ -1,0 +1,18 @@
+# Linkerd egress: cluster dışına giden trafik varsayılan ret, allowed.ext.test SNI'ına izin.
+# Not: Linkerd clusterNetworks yalnızca bench aralıklarıyla kurulur (meshes/linkerd/values.yaml); aksi halde
+# cluster dışındaki özel IP'li hedefler "cluster içi" sayılır ve EgressNetwork reddedilir.
+# __EGRESS_CIDR__ run.sh tarafından config.env'deki egress hedeflerinin /31 bloğuyla doldurulur.
+apiVersion: policy.linkerd.io/v1alpha1
+kind: EgressNetwork
+metadata: { name: external, namespace: shop }
+spec:
+  networks: [{ cidr: __EGRESS_CIDR__ }]
+  trafficPolicy: Deny
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: TLSRoute
+metadata: { name: ext-allowed, namespace: shop }
+spec:
+  parentRefs: [{ name: external, kind: EgressNetwork, group: policy.linkerd.io, namespace: shop, port: 443 }]
+  hostnames: [allowed.ext.test]
+  rules: [{ backendRefs: [{ kind: EgressNetwork, group: policy.linkerd.io, name: external }] }]

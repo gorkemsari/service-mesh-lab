@@ -1,0 +1,22 @@
+# sml-mgmt: Grafana. https://grafana.localtest.me:<HOST_MGMT_HTTPS_PORT> (admin / smlab; anonim kullanıcı izleyici)
+adminUser: admin
+adminPassword: smlab
+grafana.ini:
+  auth.anonymous: { enabled: true, org_role: Viewer }
+ingress:
+  enabled: true
+  ingressClassName: nginx
+  hosts: [grafana.localtest.me]
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - { name: Prometheus, uid: prom, type: prometheus, url: "http://prometheus-server.observability.svc", isDefault: true }
+      - { name: Tempo, uid: tempo, type: tempo, url: "http://tempo.observability.svc:3200" }
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - { name: smlab, folder: smlab, type: file, options: { path: /var/lib/grafana/dashboards/smlab } }
+dashboardsConfigMaps:
+  smlab: grafana-dashboards-smlab

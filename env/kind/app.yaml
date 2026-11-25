@@ -1,0 +1,28 @@
+# sml-app: bench cluster'ı. Mesh'ler, test servis zinciri ve yük üretici burada çalışır.
+# Dışarıya açık değil; yalnızca DMZ ingress'leri ulaşır.
+#   control-plane : ingress-nginx, mesh kontrol düzlemi, Prometheus agent   (CPUSET_CONTROL)
+#   worker        : test servis zinciri (shop) -> smlab.io/role=app       (CPUSET_APP, taint'li)
+#   worker2       : yük üretici (k6)           -> smlab.io/role=loadgen   (CPUSET_LOADGEN, taint'li)
+# CPU sabitleme ve taint'ler 'smlab setup' ile uygulanır.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  podSubnet: 10.20.0.0/16
+  serviceSubnet: 10.21.0.0/16
+kubeadmConfigPatches:
+  - |
+    kind: KubeletConfiguration
+    maxPods: 250
+nodes:
+  - role: control-plane
+    labels:
+      ingress-ready: "true"
+      smlab.io/zone: app
+  - role: worker
+    labels:
+      smlab.io/zone: app
+      smlab.io/role: app
+  - role: worker
+    labels:
+      smlab.io/zone: app
+      smlab.io/role: loadgen

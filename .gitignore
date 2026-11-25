@@ -1,0 +1,10 @@
+# üretilen durum ve indirilen araçlar
+.state/
+.tools/
+# makineye özel ayarlar
+config.local.env
+# yerel derleme çıktıları
+__pycache__/
+*.pyc
+apps/chainsvc/dotnet/bin/
+apps/chainsvc/dotnet/obj/

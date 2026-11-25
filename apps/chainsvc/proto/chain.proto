@@ -1,0 +1,31 @@
+// chainsvc gRPC sözleşmesi. Tüm dil uygulamaları bu dosyadan kod üretir (bkz. ../README.md).
+// Alanlar HTTP JSON cevabıyla birebir aynıdır; gRPC servisi aynı Response yapısını protobuf ile taşır.
+syntax = "proto3";
+
+package chain;
+
+option go_package = "smlab/chainsvc/chainpb";
+option csharp_namespace = "ChainSvc.Proto";
+
+service Chain {
+  // Call: bir zincir isteği. Hata durumunda gRPC durum kodu + mesajda JSON olarak Response döner.
+  rpc Call(CallRequest) returns (Response);
+}
+
+message CallRequest {
+  string path = 1;                    // gelen HTTP yolu (HTTP_CLIENT_APPEND_REQUEST=true ise aktarılır)
+}
+
+message Response {
+  string name = 1;                    // servis adı (NAME)
+  string uri = 2;                     // çağrılan adres (çağıran tarafından doldurulur)
+  string type = 3;                    // "HTTP" | "gRPC"
+  repeated string ip_addresses = 4;   // pod IPv4 adresleri
+  string start_time = 5;              // yyyy-MM-ddTHH:mm:ss.ffffff (yerel saat)
+  string end_time = 6;
+  string duration = 7;                // Go time.Duration biçimi (ör. "1.234ms")
+  string body = 8;                    // MESSAGE
+  repeated Response upstream_calls = 9;
+  int32 code = 10;                    // HTTP durum kodu veya gRPC durum kodu (0 = OK)
+  string error = 11;
+}

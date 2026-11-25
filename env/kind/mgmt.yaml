@@ -1,0 +1,16 @@
+# sml-mgmt: gözlem (Prometheus, Grafana, Tempo). Tüm zone network'lerine bağlı.
+# Host'a 127.0.0.1:HOST_MGMT_HTTP_PORT / HOST_MGMT_HTTPS_PORT'tan açık (VPN / iç ağ erişimini temsil eder).
+# __HOST_MGMT_*__ yer tutucularını env/up.sh config.env'den doldurur.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  podSubnet: 10.50.0.0/16
+  serviceSubnet: 10.51.0.0/16
+nodes:
+  - role: control-plane
+    labels:
+      ingress-ready: "true"
+      smlab.io/zone: mgmt
+    extraPortMappings:
+      - { containerPort: 80, hostPort: __HOST_MGMT_HTTP_PORT__, listenAddress: "127.0.0.1" }
+      - { containerPort: 443, hostPort: __HOST_MGMT_HTTPS_PORT__, listenAddress: "127.0.0.1" }

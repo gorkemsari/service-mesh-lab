@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+# smlab: service mesh PoC komut satırı aracı. Ayrıntı: docs/kullanim-kilavuzu.md
+source "$(dirname "$(readlink -f "$0")")/../lib/common.sh"
+for f in "$SMLAB_ROOT"/lib/*.sh; do [ "$f" = "$SMLAB_ROOT/lib/common.sh" ] || source "$f"; done
+
+usage() {
+  cat <<EOF
+Kullanım: smlab <komut> [argümanlar]
+
+Test ortamı
+  env up                    Zone network'leri + 5 kind cluster + ingress-nginx + edge LB (idempotent, ~10 dk)
+  env verify                Ortamı uçtan uca doğrular (edge -> DMZ -> app yolu, data, segmentasyon, mgmt)
+  env down                  Ortamı tamamen siler
+
+Kurulum
+  tools                     istioctl / linkerd CLI'larını .tools/ altına indirir
+  setup                     Node yerleşimi + gözlem + servis zinciri + doğrulama (idempotent)
+  verify                    Gözlem, servis zinciri ve aktif mesh doğrulaması
+  reset                     Bench cluster'ını ($BENCH_CLUSTER) sıfırdan kurar + setup
+
+Test uygulaması (chainsvc)
+  app list                  Diller, aktif dil, imajlar
+  app use <dil>             Servis zincirini bu dilin imajına geçirir (mesh değişmez)
+  app build [dil...|all]    İmajları derler (setup / app use bunu kendiliğinden yapar)
+  app conformance [dil...|all]
+                            Dil uygulamalarını davranış sözleşmesine karşı test eder (docker, cluster gerekmez)
+
+Mesh
+  mesh list                 Profilleri ve aktif olanı gösterir
+  mesh use <profil> [--fresh]
+                            Profili kurar, diğerlerini kaldırır, uygulamayı mesh'e alır.
+                            --fresh: önce bench cluster'ını sıfırlar (ölçüm için önerilen)
+  mesh verify               Aktif mesh'i doğrular (proxy'ler, mTLS, zincir, metrik)
+  mesh status               Aktif mesh bileşenleri
+
+Test
+  test list                 Test kataloğu (id, kategori, desteklenen mesh'ler)
+  test run <id...|all> [--profile quick|full] [--repeat N]
+                            Testleri aktif mesh ve aktif dil ile çalıştırır; her koşu results/ altına yazılır
+  suite [--meshes a,b] [--langs x,y] [--tests T1,T2] [--profile quick|full] [--repeat N] [--no-fresh]
+                            Her mesh x dil için temiz cluster'da mesh'i kurar ve testleri koşar
+  results [--last N]        Kayıtlı test koşularını listeler
+
+Rapor
+  report [--session ID] [--lang DİL] [--out DİZİN]
+                            Dil başına rapor + (birden fazla dil varsa) diller arası kıyas -> reports/<zaman>/
+
+Dokümantasyon
+  docs                      docs/test-senaryolari.md dosyasını test tanımlarından yeniden üretir
+
+Profiller : ${MESH_PROFILES[*]}
+Diller    : $(app_langs)    (aktif: $(current_lang))
+EOF
+}
+
+cmd_setup() {
+  bench_nodes
+  obs_install_mgmt
+  obs_install_agent "$(current_mesh)"
+  app_deploy
+  cmd_verify
+}
+
+cmd_verify() {
+  obs_verify
+  if [ "$(current_mesh)" != none ]; then mesh_verify; else app_verify; fi
+  log "Doğrulama tamam (aktif mesh: $(current_mesh), dil: $(current_lang))"
+}
+
+cmd_reset() {
+  log "Bench cluster'ı sıfırlanıyor: $BENCH_CLUSTER"
+  kind delete cluster --name "$BENCH_CLUSTER"
+  bash "$ENV_DIR/up.sh"
+  set_current_mesh none
+  cmd_setup
+}
+
+cmd_env() {
+  case ${1:-} in
+    up|verify|down) bash "$ENV_DIR/$1.sh" ;;
+    *) die "env: up | verify | down" ;;
+  esac
+}
+
+# app_args <dil...|all>: dil listesi (boşsa aktif dil)
+app_args() {
+  if [ $# -eq 0 ]; then current_lang
+  elif [ "$1" = all ]; then app_langs | tr ' ' '\n'
+  else printf '%s\n' "$@"
+  fi
+}
+
+cmd_app() {
+  local sub=${1:-list} l; shift || true
+  case $sub in
+    list)
+      echo "DİL      AKTİF    İMAJ                               ÇALIŞMA ZAMANI"
+      for l in $(app_langs); do
+        printf '%-8s %-8s %-34s %s\n' "$l" "$([ "$l" = "$(current_lang)" ] && echo evet)" "$(app_image_of "$l")" \
+          "$(docker image inspect -f '{{index .Config.Labels "smlab.runtime"}}' "$(app_image_of "$l")" 2>/dev/null || echo '(derlenmedi)')"
+      done ;;
+    use)
+      l=${1:?dil gerekli ($(app_langs))}
+      app_use "$l"
+      obs_install_agent "$(current_mesh)"   # metriklerin lang etiketi
+      if [ "$(current_mesh)" != none ]; then mesh_verify; else app_verify; fi
+      log "Aktif dil: $l (mesh: $(current_mesh))" ;;
+    build)
+      for l in $(app_args "$@"); do app_build "$l"; done ;;
+    conformance)
+      local langs=()
+      mapfile -t langs < <(app_args "$@")
+      bash "$SMLAB_ROOT/apps/chainsvc/conformance/run.sh" "${langs[@]}" ;;
+    *) die "app: bilinmeyen alt komut $sub (list | use | build | conformance)" ;;
+  esac
+}
+
+main() {
+  local cmd=${1:-help}; shift || true
+  case $cmd in
+    env)     cmd_env "$@" ;;
+    tools)   tools_install ;;
+    setup)   cmd_setup ;;
+    verify)  cmd_verify ;;
+    reset)   cmd_reset ;;
+    app)     cmd_app "$@" ;;
+    mesh)    cmd_mesh "$@" ;;
+    test)    cmd_test "$@" ;;
+    suite)   cmd_suite "$@" ;;
+    results) cmd_results "$@" ;;
+    report)  cmd_report "$@" ;;
+    docs)    cmd_docs ;;
+    help|-h|--help) usage ;;
+    *) usage; exit 1 ;;
+  esac
+}
+main "$@"

@@ -1,0 +1,12 @@
+# sml-dmz-a: edge LB'nin arkasındaki iki DMZ cluster'ından biri. TLS burada sonlanır.
+# Host'a doğrudan açık değil; yalnızca edge LB ulaşır.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+networking:
+  podSubnet: 10.10.0.0/16
+  serviceSubnet: 10.11.0.0/16
+nodes:
+  - role: control-plane
+    labels:
+      ingress-ready: "true"
+      smlab.io/zone: dmz

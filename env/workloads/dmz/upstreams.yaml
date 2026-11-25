@@ -1,0 +1,9 @@
+# sml-app ingress'ini temsil eden selector'sız servis.
+# EndpointSlice'ını env/up.sh, sml-app node'unun NET_APP IP'si ile yazar.
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-ingress
+spec:
+  ports:
+    - { name: http, port: 80, targetPort: 80 }

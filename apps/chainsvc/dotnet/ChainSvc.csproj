@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- chainsvc (.NET): service-mesh-lab servis zinciri test uygulaması. Sözleşme: ../README.md -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>ChainSvc</RootNamespace>
+    <AssemblyName>chainsvc</AssemblyName>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- Çalışma zamanı ayarları .NET / ASP.NET Core varsayılanında bırakılır (Server GC, tiered JIT):
+         amaç şirketteki tipik bir .NET servisinin davranışını ölçmek. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Protobuf Include="../proto/chain.proto" GrpcServices="Both" Link="proto/chain.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Grpc.AspNetCore: gRPC sunucusu + Grpc.Net.Client + Google.Protobuf + Grpc.Tools (kod üretimi) -->
+    <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />
+  </ItemGroup>
+
+</Project>
